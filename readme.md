@@ -2,9 +2,11 @@
 
 ## client.py
 * client.py contains the `client` object
+* logs client actions and metrics to `client{rank}.log`
 
 ## server.py
 * server.py contains the `server` object
+* logs server actions and metrics to `server{rank}.log`
 
 ## data/iris_data_generator.py
 * generates non-iid dataloader for each client as `.pt` file. Loaded onto the `client` when initialized.
