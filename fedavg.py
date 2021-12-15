@@ -4,6 +4,7 @@ import torch.multiprocessing as mp
 import torch.distributed.rpc as rpc
 from model import *
 import os
+import logging
 
 def init_env():
     print("Initialize Meetup Spot")

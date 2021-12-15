@@ -4,12 +4,15 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.distributed.nn.api.remote_module import RemoteModule
 from client import client
+import logging
 
 class server(object):
     def __init__(self,
                  model,
                  rank,
                  world_size):
+
+        self.create_logger(rank)
 
         self.n_clients = world_size - 1
         self.model = model
@@ -19,10 +22,10 @@ class server(object):
 
         self.initialize_client_modules()
 
-        print("Initialized Server")
+        self.logger.info(f"Server {self.rank} Initialized")
 
     def initialize_client_modules(self):
-        print("Initialize Clients")
+        self.logger.info(f"Initialize {self.world_size-1} Clients")
         for rank in range(self.world_size-1):
             self.client_rrefs.append(
                                     rpc.remote(f"worker{rank+1}",
@@ -31,19 +34,19 @@ class server(object):
                                 )
 
     def send_global_model(self):
-       print("Sending Global Parameters")
+       self.logger.info("Sending Global Parameters")
        check_global = [client_rref.remote().load_global_model(self.model.state_dict().copy()) for client_rref in self.client_rrefs]
        for check in check_global:
            check.to_here()
 
     def train(self):
-        print("Initializing Trainig")
+        self.logger.info("Initializing Trainig")
         check_train = [client_rref.remote(timeout=0).train() for client_rref in self.client_rrefs]
         for check in check_train:
             check.to_here(timeout=0)
 
     def evaluate(self):
-        print("Initializing Evaluation")
+        self.logger.info("Initializing Evaluation")
         total = []
         num_corr = []
         check_eval = [client_rref.remote(timeout=0).evaluate() for client_rref in self.client_rrefs]
@@ -52,10 +55,10 @@ class server(object):
             total.append(tot)
             num_corr.append(corr)
 
-        print("Accuracy over all data: {:.3f}".format(sum(num_corr)/sum(total)))
+        self.logger.info("Accuracy over all data: {:.3f}".format(sum(num_corr)/sum(total)))
 
     def aggregate(self):
-        print("Aggregating Models")
+        self.logger.info("Aggregating Models")
         check_n_sample = [client_rref.rpc_async().send_num_train() for client_rref in self.client_rrefs]
         n_samples = [check.wait() for check in check_n_sample]
         n_total = sum(n_samples)
@@ -75,3 +78,8 @@ class server(object):
     def update_clients(self):
         self.aggregate()
         self.send_global_model()
+
+    def create_logger(self,rank):
+        self.logger = logging.getLogger(f'server{rank}')
+        self.logger.setLevel(logging.INFO)
+        self.logger.addHandler(logging.FileHandler(f"server{rank}.log",mode='w',encoding='utf-8'))

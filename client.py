@@ -3,12 +3,20 @@ import torch.distributed.rpc as rpc
 import torch.nn as nn
 import torch.optim as optim
 from collections import Counter
+import logging
+
+logging.basicConfig(format='%(levelname)s:%(message)s',
+                    filename="client.log", filemode='w',
+                    level=logging.INFO)
 
 class client(object):
     def __init__(self,
                  model,
                  rank,
                  world_size):
+
+        self.create_logger(rank)
+
         self.rank = rank
         self.world_size = world_size
         self.load_data_local(f"data/data_worker{rank}_")
@@ -18,15 +26,15 @@ class client(object):
 
         self.criterion = nn.CrossEntropyLoss()
 
+        self.logger.info(f"Client {self.rank} Initialized")
 
-        print(f"Initialized Client {rank}")
 
     def load_global_model(self,global_params):
-        print(f"Client {self.rank} Loading Global Weights")
+        self.logger.info(f"Client {self.rank} Loading Global Weights")
         self.model.load_state_dict(global_params)
 
     def send_local_model(self):
-        print(f"Client {self.rank} Sending Local Weights")
+        self.logger.info(f"Client {self.rank} Sending Local Weights")
         return self.model.state_dict()
 
     def send_num_train(self):
@@ -56,10 +64,10 @@ class client(object):
                 #           (epoch + 1, i + 1, running_loss / 2000))
                 #     running_loss = 0.0
 
-        print('Finished Training')
+        self.logger.info('Finished Training')
 
     def evaluate(self):
-        print(f"Client {self.rank} Evaluating Data")
+
         correct = 0
         total = 0
         # since we're not training, we don't need to calculate the gradients for our outputs
@@ -72,7 +80,7 @@ class client(object):
                 _, predicted = torch.max(outputs.data, 1)
                 total += labels.size(0)
                 correct += (predicted == labels).sum().item()
-
+        self.logger.info(f"Client {self.rank} Evaluating Data: {round(correct/total,3)}")
         return correct,total
 
     def load_data_local(self,datapath):
@@ -80,6 +88,13 @@ class client(object):
         self.testloader = torch.load(datapath+"test.pt")
 
         self.n_train = len(self.trainloader.dataset)
-        print("Local Data Statistics:")
-        print("Dataset Size: {:.2f}".format(self.n_train))
-        print(dict(Counter(self.trainloader.dataset[:][1].numpy().tolist())))
+        self.logger.info("Local Data Statistics:")
+        self.logger.info("Dataset Size: {:.2f}".format(self.n_train))
+        self.logger.info(dict(Counter(self.trainloader.dataset[:][1].numpy().tolist())))
+
+    def create_logger(self,rank):
+        self.logger = logging.getLogger(f'client{rank}')
+        self.logger.setLevel(logging.INFO)
+
+        self.logger.addHandler(logging.FileHandler(f"client{rank}.log",mode='w',encoding='utf-8'))
+
