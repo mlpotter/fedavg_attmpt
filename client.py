@@ -95,6 +95,5 @@ class client(object):
     def create_logger(self,rank):
         self.logger = logging.getLogger(f'client{rank}')
         self.logger.setLevel(logging.INFO)
-
         self.logger.addHandler(logging.FileHandler(f"client{rank}.log",mode='w',encoding='utf-8'))
 

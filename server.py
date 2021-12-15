@@ -1,8 +1,5 @@
 import torch
 import torch.distributed.rpc as rpc
-import torch.nn as nn
-import torch.optim as optim
-from torch.distributed.nn.api.remote_module import RemoteModule
 from client import client
 import logging
 
