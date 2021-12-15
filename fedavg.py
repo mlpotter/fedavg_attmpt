@@ -8,7 +8,7 @@ import os
 def init_env():
     print("Initialize Meetup Spot")
     os.environ['MASTER_ADDR'] = "localhost"
-    os.environ["MASTER_PORT"] = "5682"
+    os.environ["MASTER_PORT"] = "5689"
 
 def example(rank,world_size):
     init_env()
