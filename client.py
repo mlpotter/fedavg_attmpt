@@ -13,7 +13,8 @@ class client(object):
     def __init__(self,
                  model,
                  rank,
-                 world_size):
+                 world_size,
+                 args=None):
 
         self.create_logger(rank)
 
@@ -25,6 +26,7 @@ class client(object):
                                    lr=0.001)
 
         self.criterion = nn.CrossEntropyLoss()
+        self.epochs = args.epochs
 
         self.logger.info(f"Client {self.rank} Initialized")
 
@@ -41,7 +43,7 @@ class client(object):
         return self.n_train
 
     def train(self):
-        for epoch in range(3):  # loop over the dataset multiple times
+        for epoch in range(self.epochs):  # loop over the dataset multiple times
 
             # running_loss = 0.0
             for i, data in enumerate(self.trainloader, 0):

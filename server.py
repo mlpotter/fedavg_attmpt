@@ -7,7 +7,8 @@ class server(object):
     def __init__(self,
                  model,
                  rank,
-                 world_size):
+                 world_size,
+                 args=None):
 
         self.create_logger(rank)
 
@@ -16,18 +17,17 @@ class server(object):
         self.client_rrefs = []
         self.rank = rank
         self.world_size = world_size
-
-        self.initialize_client_modules()
+        self.initialize_client_modules(args)
 
         self.logger.info(f"Server {self.rank} Initialized")
 
-    def initialize_client_modules(self):
+    def initialize_client_modules(self,args):
         self.logger.info(f"Initialize {self.world_size-1} Clients")
         for rank in range(self.world_size-1):
             self.client_rrefs.append(
                                     rpc.remote(f"worker{rank+1}",
                                            client,
-                                           args=(self.model,rank+1,self.world_size))
+                                           args=(self.model,rank+1,self.world_size,args))
                                 )
 
     def send_global_model(self):
