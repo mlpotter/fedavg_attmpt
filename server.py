@@ -2,6 +2,7 @@ import torch
 import torch.distributed.rpc as rpc
 from client import client
 import logging
+from copy import deepcopy
 
 class server(object):
     def __init__(self,
@@ -32,7 +33,7 @@ class server(object):
 
     def send_global_model(self):
        self.logger.info("Sending Global Parameters")
-       check_global = [client_rref.remote().load_global_model(self.model.state_dict().copy()) for client_rref in self.client_rrefs]
+       check_global = [client_rref.remote().load_global_model(deepcopy(self.model.state_dict())) for client_rref in self.client_rrefs]
        for check in check_global:
            check.to_here()
 
@@ -63,7 +64,7 @@ class server(object):
         check_params = [client_rref.rpc_async().send_local_model() for client_rref in self.client_rrefs]
         client_params = [check.wait() for check in check_params]
 
-        global_model_state_dict = self.model.state_dict().copy()
+        global_model_state_dict = deepcopy(self.model.state_dict())
 
         for name,param in self.model.named_parameters():
             global_model_state_dict[name] = torch.zeros_like(global_model_state_dict[name])
